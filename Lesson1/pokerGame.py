@@ -31,35 +31,59 @@ def allmax(iterable, key=None):
 
 
 def hand_rank(hand):
-    # 手牌比较处理规则
-    ranks = card_ranks(hand)
-    if straight(ranks) and flush(hand):  # straight flush
-        return 8, max(ranks)
-    elif kind(4, ranks):  # 4 of a kind
-        return 7, kind(4, ranks), kind(1, ranks)
-    elif kind(3, ranks) and kind(2, ranks):  # full house
-        return 6, kind(3, ranks), kind(2, ranks)
-    elif flush(hand):  # flush
-        return 5, ranks
-    elif straight(ranks):  # straight
-        return 4, max(ranks)
-    elif kind(3, ranks):  # 3 of a kind
-        return 3, kind(3, ranks), ranks
-    elif two_pair(ranks):  # 2 pair
-        return 2, two_pair(ranks), ranks
-    elif kind(2, ranks):  # kind
-        return 1, kind(2, ranks), ranks
-    else:  # high card
-        return 0, ranks
+    """Return a value indicating how high the hand ranks."""
+    # counts is the count of each rank
+    # ranks lists corresponding ranks
+    # E.g. '7 T 7 9 7' => counts = (3, 1, 1); ranks = (7, 10, 9)
+    groups = group(['--23456789TJQKA'.index(r) for r, s in hand])
+    counts, ranks = unzip(groups)
+    if ranks == (14, 5, 4, 3, 2):
+        ranks = (5, 4, 3, 2, 1)
+    straight = len(ranks) == 5 and max(ranks) - min(ranks) == 4
+    flush = len(set([s for r, s in hand])) == 1
+    return (
+               9 if (5,) == counts else
+               8 if straight and flush else
+               7 if (4, 1) == counts else
+               6 if (3, 2) == counts else
+               5 if flush else
+               4 if straight else
+               3 if (3, 1, 1) == counts else
+               2 if (2, 2, 1) == counts else
+               1 if (2, 1, 1, 1) == counts else
+               0), ranks
 
 
-def card_ranks(cards):
-    """Return a list of the ranks, sorted with higher first.
-    card_ranks(['AC', '3D', '4S', 'KH']) should output [14, 13, 4, 3]
-    手牌提取数值"""
-    ranks = ["--23456789TJQKA".index(r) for r, s in cards]
-    ranks.sort(reverse=True)
-    return [1, 2, 3, 4, 5] if ranks == [14, 5, 4, 3, 2] else ranks
+def group(items):
+    """Return a list of [(count, x)...], highest count first, the highest x first"""
+    groups = [(items.count(x), x) for x in set(items)]
+    return sorted(groups, reverse=True)
+
+
+def unzip(pairs):
+    return zip(*pairs)
+
+
+def card_ranks(hand):
+    """Return a list of the ranks, sorted with higher first."""
+    # ranks = ['--23456789TJQKA'.index(r) for r, s in hand]
+    # ranks = [{'A':14,
+    #           'K':13,
+    #           'Q':12,
+    #           'J':11,
+    #           'T':10,
+    #           }.get(r,r) for r, s in hand]
+    ranks = [14 if r == 'A' else
+             13 if r == 'K' else
+             12 if r == 'Q' else
+             11 if r == 'J' else
+             10 if r == 'T' else
+             int(r)
+             for r, s in hand]
+    ranks.sort(reverse = True)
+    if ranks == [14, 5, 4, 3, 2]:
+        ranks = [5, 4, 3, 2, 1]
+    return ranks
 
 
 def straight(ranks):
@@ -98,36 +122,40 @@ def test():
     sf = "6C 7C 8C 9C TC".split()  # Straight Flush
     fk = "9D 9H 9S 9C 7D".split()  # Four of a Kind
     fh = "TD TC TH 7C 7D".split()  # Full House
-    tp = "5S 5D 9H 9C 6S".split()  # Two pairs
-    al = "AC 2D 4H 3D 5S".split()  # Ace-Low Straight
+    s1 = "AS 2S 3S 4S 5C".split()  # A-5 straight
+    s2 = "2C 3C 4C 5S 6S".split()  # 2-6 straight
+    s3 = "TC JC QC KS AS".split()  # 10-A straight
+    tp = "5S 5D 9H 9C 6S".split()  # two pair
+    ah = "AS 2S 3S 4S 6C".split()  # A high
+    sh = "2S 3S 4S 6C 7D".split()  # 7 high
+    assert poker([sf, fk, fh]) == [sf]
+    assert poker([fk, fh]) == [fk]
+    assert poker([fh, fh]) == [fh, fh]
+    assert poker([sf]) == [sf]
+    assert poker([sf] + 99 * [fh]) == [sf]
+    assert poker([s1, s2]) == [s2]
+    assert poker([s1, tp]) == [s1]
 
-    fkranks = card_ranks(fk)
-    tpranks = card_ranks(tp)
+    # assert hand_rank(sf) == (8, 10)
+    # assert hand_rank(fk) == (7, 9, 7)
+    # assert hand_rank(fh) == (6, 10, 7)
+    # assert hand_rank(s1) == (4, 5)
+    # assert hand_rank(s3) == (4, 14)
 
     assert card_ranks(sf) == [10, 9, 8, 7, 6]
     assert card_ranks(fk) == [9, 9, 9, 9, 7]
     assert card_ranks(fh) == [10, 10, 10, 7, 7]
-
-    assert poker([sf, fk, fh]) == sf
-    assert poker([fk, fh]) == fk
-    assert poker([fh, fh]) == fh
-
-    assert poker([sf]) == sf
-    assert poker([sf] + 99 * [fh]) == sf
-
-    assert hand_rank(sf) == (8, 10)
-    assert hand_rank(sf) == (8, 10)
-    assert hand_rank(fk) == (7, 9, 7)
-    assert hand_rank(fh) == (6, 10, 7)
-
     assert card_ranks(['AC', '3D', '4S', 'KH']) == [14, 13, 4, 3]
 
-    assert straight([9, 8, 7, 6, 5]) is True
-    assert straight([9, 8, 8, 6, 5]) is False
-    assert straight(card_ranks(al)) is True
+    # Ace-high beats 7-high
+    assert (card_ranks(['AS', '2C', '3D', '4H', '6S']) >
+            card_ranks(['2D', '3S', '4C', '6H', '7D']))
+    # 5-straight loses to 6-straight
+    assert (card_ranks(['AS', '2C', '3D', '4H', '5S']) <
+            card_ranks(['2D', '3S', '4C', '5H', '6D']))
 
-    assert flush(sf) is True
-    assert flush(fk) is False
+    fkranks = card_ranks(fk)
+    tpranks = card_ranks(tp)
 
     assert kind(4, fkranks) == 9
     assert kind(3, fkranks) is None
@@ -135,7 +163,13 @@ def test():
     assert kind(1, fkranks) == 7
 
     assert two_pair(tpranks) == (9, 5)
-    assert two_pair(fkranks) is None
+    assert two_pair([10, 10, 5, 5, 2]) == (10, 5)
+
+    assert straight([9, 8, 7, 6, 5]) is True
+    assert straight([9, 8, 8, 6, 5]) is False
+
+    assert flush(sf) is True
+    assert flush(fk) is False
 
     return 'tests pass'
 
