@@ -1,12 +1,14 @@
 import random
-
+import math
+import itertools
 
 myDeck = [r + s for r in '23456789TJQKA' for s in 'SHDC']
 
 
+# 发牌
 def deal(num_hands, n=5, deck=myDeck):
     random.shuffle(deck)
-    return [deck[n*i:n*(i+1)] for i in range(num_hands)]
+    return [deck[n * i:n * (i + 1)] for i in range(num_hands)]
 
 
 def poker(hands):
@@ -26,6 +28,7 @@ def allmax(iterable, key=None):
         elif xval == maxval:
             result.append(x)
     return result
+
 
 def hand_rank(hand):
     # 手牌比较处理规则
@@ -138,3 +141,88 @@ def test():
 
 
 print(test())
+
+hand_names = [
+    'High Card',
+    'Pair',
+    '2 Pair',
+    '3 Kind',
+    'Straight',
+    'Flush',
+    'Full House',
+    '4 Kind',
+    'Straight Flush',
+]
+
+
+def hand_percentages(n=700 * 1000):
+    """Sample n random hands and print a table of percentages for each type of hand"""
+    counts = [0] * 9
+    for i in range(n // 10):
+        for hand in deal(10):
+            ranking = hand_rank(hand)[0]
+            counts[ranking] += 1
+    for i in reversed(range(9)):
+        print('%14s: %6.3f' % (hand_names[i], 100. * counts[i] / n))
+
+
+def all_hand_percentages():
+    # Print an exhaustive table of frequencies for each type of hand
+    counts = [0] * 9
+    n = 0
+    deck = [r + s for r in '23456789TJQKA' for s in 'SHDC']
+    for hand in itertools.combinations(deck, 5):
+        n += 1
+        ranking = hand_rank(hand)[0]
+        counts[ranking] += 1
+    for i in reversed(range(9)):
+        print('%14s: %7d %6.3f' % (hand_names[i], counts[i], 100. * counts[i] / n))
+
+
+def shuffle1(deck):
+    # O(N**2)
+    # incorrect distribution
+    N = len(deck)
+    swapped = [False] * N
+    while not all(swapped):
+        i, j = random.randrange(N), random.randrange(N)
+        swapped[i] = swapped[j] = True
+        deck[i], deck[j] = deck[j], deck[i]
+
+
+def shuffle2(deck):
+    # O(N**2)
+    # incorrect distribution?
+    N = len(deck)
+    swapped = [False] * N
+    while not all(swapped):
+        i, j = random.randrange(N), random.randrange(N)
+        swapped[i] = True
+        deck[i], deck[j] = deck[j], deck[i]
+
+
+def shuffle2a(deck):
+    # http://forums.udacity.com/cs212-april2012/questions/3462/better-implementation-of-shuffle2
+    N = len(deck)
+    swapped = [False] * N
+    while not all(swapped):
+        i = random.choice(filter(lambda idx: not swapped[idx], range(N)))
+        j = random.choice(filter(lambda idx: not swapped[idx], range(N)))
+        swapped[i] = True
+        deck[i], deck[j] = deck[j], deck[i]
+
+
+def shuffle3(deck):
+    # O(N)
+    # incorrect distribution
+    N = len(deck)
+    for i in range(N):
+        j = random.randrange(N)
+        deck[i], deck[j] = deck[j], deck[i]
+
+
+def knuth(deck):
+    n = len(deck)
+    for i in range(n - 1):
+        j = random.randrange(i, n)
+        deck[i], deck[j] = deck[j], deck[i]
