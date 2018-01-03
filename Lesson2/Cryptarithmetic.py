@@ -47,9 +47,16 @@ def compile_formula(formula, verbose=False):
     in same order as parms of function. For example, 'YOU == ME**2' returns
     (lambda Y, M, E, U, O): (U+10*O+100*Y) == (E+10*M)**2), 'YMEUO' """
     letters = ''.join(set(re.findall('[A-Z]', formula)))
+    firstletters = set(re.findall(r'\b([A-Z])[A-Z]', formula))
     parms = ', '.join(letters)
     tokens = map(compile_word, re.split('([A-Z]+)', formula))
     body = ''.join(tokens)
+
+    if firstletters:
+        tests = ' and '.join(L+'!=0' for L in firstletters)
+        body = tests+' and ('+body+')'
+
+
     f = 'lambda %s: %s' % (parms, body)
     if verbose:
         print(f)
